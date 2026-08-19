@@ -11,6 +11,7 @@ import {
   ArchiveIcon,
   FlaskConicalIcon,
   BotIcon,
+  BrainIcon,
   createLucideIcon,
   CalendarClockIcon,
   FileDiffIcon,
@@ -103,6 +104,7 @@ const SETTINGS_SECTION_ICONS: Readonly<
   "/settings/maintenance": WrenchIcon,
   "/settings/labs": FlaskConicalIcon,
   "/settings/about": InfoIcon,
+  "/settings/control-center": BrainIcon,
   "/settings/archived": ArchiveIcon,
 };
 

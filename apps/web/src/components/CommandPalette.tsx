@@ -52,6 +52,7 @@ import {
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeftIcon,
+  BrainIcon,
   ChartNoAxesColumnIcon,
   CheckIcon,
   ChevronRightIcon,
@@ -1501,6 +1502,18 @@ function OpenCommandPaletteDialog(props: {
     icon: <SettingsIcon className={ITEM_ICON_CLASS} />,
     run: async () => {
       await navigate({ to: "/settings" });
+    },
+  });
+
+  // Second Brain fork: the model-routing pickers for the Control Center automations.
+  actionItems.push({
+    kind: "action",
+    value: "action:settings:control-center",
+    searchTerms: ["control center", "model routing", "second brain", "daybrief", "models"],
+    title: "Open Control Center Settings",
+    icon: <BrainIcon className={ITEM_ICON_CLASS} />,
+    run: async () => {
+      await navigate({ to: "/settings/control-center" });
     },
   });
 
