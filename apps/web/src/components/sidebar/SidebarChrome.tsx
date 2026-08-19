@@ -116,16 +116,18 @@ function SidebarBrand({ onBackdrop }: { onBackdrop: boolean }) {
 }
 
 function SidebarBrandMark({ onBackdrop }: { onBackdrop: boolean }) {
+  // Second Brain fork: the brand reads "Second Brain" with a small "on T3" credit.
   return (
-    <span className="inline-flex min-w-0 items-baseline gap-1 text-sm font-medium tracking-tight">
-      <T3Wordmark aria-label="T3" className="h-[1cap] w-auto shrink-0" />
+    <span className="inline-flex min-w-0 items-center">
+      <span className="truncate text-sm font-semibold tracking-tight">Second Brain</span>
       <span
+        aria-label="built on T3 Code"
         className={cn(
-          "truncate [text-box:trim-both_cap_alphabetic] supports-[text-box:trim-both_cap_alphabetic]:py-1",
-          onBackdrop ? "text-white/70" : "text-muted-foreground",
+          "ml-0.5 flex items-center gap-0.5 text-3xs font-medium tracking-tight",
+          onBackdrop ? "text-white/55" : "text-muted-foreground/70",
         )}
       >
-        Code
+        on <T3Wordmark aria-label="T3" className="h-2 w-auto shrink-0" />
       </span>
     </span>
   );
