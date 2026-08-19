@@ -8,6 +8,7 @@ export type SettingsPath =
   | "/settings/integrations"
   | "/settings/source-control"
   | "/settings/connections"
+  | "/settings/control-center"
   | "/settings/archived";
 
 export interface SettingsSearchItem {
@@ -32,6 +33,8 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/integrations": "Integrations",
   "/settings/source-control": "Source Control",
   "/settings/connections": "Connections",
+  // Second Brain fork: model routing for the Control Center automations.
+  "/settings/control-center": "Control Center Settings",
   "/settings/archived": "Archive",
 };
 
@@ -236,6 +239,16 @@ export const SETTINGS_SEARCH_ITEMS = [
     id: "remote-environments",
     title: "Remote environments",
     to: "/settings/connections",
+  },
+  {
+    id: "model-routing",
+    title: "Model routing",
+    to: "/settings/control-center",
+  },
+  {
+    id: "about-second-brain",
+    title: "About Second Brain",
+    to: "/settings/control-center",
   },
   {
     id: "archive",
