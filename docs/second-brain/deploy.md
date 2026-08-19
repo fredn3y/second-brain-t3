@@ -1,0 +1,101 @@
+# Second Brain fork: what differs, how it is deployed, how to roll back
+
+This repository (`fredn3y/second-brain-t3`) is a thin downstream of
+[pingdotgg/t3code](https://github.com/pingdotgg/t3code) (`upstream` remote). It is the chat
+surface of Fred's Second Brain Control Center on the VPS `codex-dev-01`. Keep the delta small and
+isolated so replaying the fork onto official stable release tags stays reviewable.
+
+## The delta
+
+| Area                                      | Files                                                                                                                                                                                                                       | Why                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Settings → **Control Center Settings**    | `apps/web/src/routes/settings.control-center.tsx`, `apps/web/src/components/settings/ControlCenterSettings.tsx`, `controlCenterModels.ts`, entries in `settingsSearch.ts` / `SettingsSidebarNav.tsx` / `CommandPalette.tsx` | The six model-routing pickers (engine / model / effort per automation) that used to live on the gateway's `/settings` page, rendered with T3's own settings rows, selects, search and keyboard conventions.                                                                                                                                                                                                                         |
+| Authenticated relay to the model registry | `apps/server/src/controlCenter/ControlCenterModelsRoute.ts`, `config.ts` (`controlCenterGatewayUrl`), `cli/config.ts` (`T3CODE_CONTROL_CENTER_GATEWAY_URL`), `server.ts`                                                    | `GET/POST /api/control-center/models` requires a paired T3 session (`orchestration:read` / `orchestration:operate`) and forwards to the loopback gateway `http://127.0.0.1:8765/api/models` (`second-brain/scripts/tasks/render.py`, registry in `cc/models.py`). The gateway keeps its own same-origin + token rules for everyone else; T3 reaches it as a plain loopback client. The browser never talks to the gateway directly. |
+| Branding                                  | `apps/web/src/branding.ts`, `components/sidebar/SidebarChrome.tsx`, `SplashScreen.tsx`, `index.html`, `public/manifest.webmanifest`                                                                                         | Browser surface reads "Second Brain" (no stage suffix in production builds); the sidebar brand keeps a small "on T3" mark and the Control Center page carries an "About Second Brain" attribution to upstream. Favicon/touch icon are the 🧠 emoji (`apps/web/public/*`, Noto Color Emoji artwork, Apache-2.0; the tab uses the OS emoji via an SVG data URL).                                                                      |
+| Build                                     | `scripts/second-brain/build.sh`                                                                                                                                                                                             | Source build of the `t3` package (server + bundled web) with only server/web workspaces installed and the Second Brain icons restored over upstream's dev-icon stamp.                                                                                                                                                                                                                                                               |
+
+Integration boundary decision (2026-08-19): the model registry stays in the Second Brain repo
+(Python, runtime DB in `~/.local/state/second-brain/control-center.db`); T3 only relays its
+existing JSON API. No registry logic, catalog or validation is duplicated here, so model-catalog
+changes need no T3 rebuild.
+
+## Runtime on the VPS
+
+- Unit: `t3code.service` (user systemd; base unit generated by `npx t3@latest service install`,
+  untouched). The drop-in `~/.config/systemd/user/t3code.service.d/override.conf` originally points
+  `ExecStart` at this checkout's build instead of the launcher. After an approved stable cutover,
+  it points at a verified immutable bundle under `~/.local/state/second-brain/t3-stable-updater/`:
+
+  ```ini
+  [Service]
+  WorkingDirectory=/home/fred/code/second-brain
+  Environment=PATH=/home/fred/.local/bin:/home/fred/.local/npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  Environment=T3CODE_CONTROL_CENTER_GATEWAY_URL=http://127.0.0.1:8765
+  ExecStart=
+  ExecStart=/usr/bin/doppler run --project second-brain --config dev -- /usr/bin/node /home/fred/code/second-brain-t3/apps/server/dist/bin.mjs serve
+  ```
+
+  Running `bin.mjs serve` directly (not via `~/.t3/runtime/service-launcher.mjs`) means the
+  server never self-updates over the fork; updates are a rebuild + restart.
+
+- State stays in `~/.t3/userdata` (`T3CODE_HOME=/home/fred/.t3` from the base unit).
+- Tailscale Serve (tailnet-only): `https://codex-dev-01.tail7b2876.ts.net/` → `127.0.0.1:3773`
+  (this server); path routes `/tasks`, `/docs`, `/AGENTS.md`, `/strategy.md` → the gateway on
+  `127.0.0.1:8765` (mount prefix is stripped and re-added via the target path, so URLs are
+  unchanged). The pilot `:9443` route was switched off on 2026-08-19.
+
+## Stable updates and cutover
+
+The updater lives in the Second Brain repository under `scripts/maintenance/t3_update/`.
+Its policy and operating instructions are in `docs/tools/t3-stable-updater.md` there.
+The user timer `t3-stable-update.timer` prepares new releases; each live cutover requires
+Fred's attended approval of the exact immutable build. A delegated workroom cannot self-approve.
+
+The canonical checkout is never rebased or rebuilt by the updater. It fetches GitHub's official
+`pingdotgg/t3code` latest release, rejects drafts, prereleases and every non-stable tag shape,
+then replays the protected fork commits in an isolated worktree. Conflicts stop preparation for
+review. The deployed manifest carries forward reviewed adaptations for the next stable rebase.
+
+Build an isolated worktree with the **exact release version**:
+
+```bash
+scripts/second-brain/build.sh 0.0.40
+```
+
+This follows upstream release CI by running `scripts/update-release-package-versions.ts` before
+building. The four release manifests and the built CLI must report `0.0.40`; a one-version offset
+is a build error. The updater packages server, web and native runtime dependencies into a
+versioned directory, removes write permissions and verifies hashes and the reported version.
+It smoke-tests migrations on a read-only snapshot of real data, paired bridge reads, the model
+relay and a native terminal against an isolated home and port.
+
+After Fred separately approves the shown release plan in T3 chat or an attended SSH session,
+record it with the updater's `authorize --attended-approval` command, then queue through:
+
+```bash
+scripts/second-brain/deploy-vps.sh --bundle /absolute/path/to/the/approved/immutable/build
+```
+
+The queue command launches an independent `sbt3-cutover-*` user service. It refuses to execute
+from T3's cgroup. It checks all persisted turns, providers, pending approvals and checkpoints,
+including archived threads; unknown state or projection lag blocks the cutover. Once idle, it
+freezes the service, checks again, snapshots SQLite and configuration, and stops that exact
+frozen cgroup with automatic restart temporarily disabled. The freeze closes the new-turn race.
+No Tailscale route changes are part of an update.
+
+## Rollback and interrupted cutovers
+
+Each transaction retains an immutable copy of the outgoing binary and native dependencies,
+the service override, configuration/auth files, and a SQLite online backup containing committed
+WAL data. Database integrity and hashes are checked before use.
+
+A failed version, web, authenticated bridge or model-relay check stops the candidate and restores
+both binary and SQLite, quarantining the failed database and its WAL/SHM files. The previous
+version must pass the same health checks before rollback is reported as successful. If new
+work has arrived, automatic database restore stops rather than discarding that work.
+
+The detached runner has an `ExecStopPost` recovery command and a durable transaction journal.
+An interruption before shutdown thaws the original service. An interruption after shutdown
+uses the recorded backup; failed recovery retains its evidence and requires attended attention.
+Do not restore only an old override or point an old binary at a database migrated by a newer
+release. Do not bypass the updater with `systemctl restart t3code.service` from a live T3 turn.
