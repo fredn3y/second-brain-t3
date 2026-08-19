@@ -1,4 +1,6 @@
 {
+  "name": "Second Brain",
+  "short_name": "Second Brain",
   "id": "/",
   "start_url": "/",
   "scope": "/",
