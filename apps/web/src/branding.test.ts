@@ -47,7 +47,7 @@ describe("branding", () => {
     expect(branding.HOSTED_APP_CHANNEL).toBe("nightly");
     expect(branding.HOSTED_APP_CHANNEL_LABEL).toBe("Nightly");
     expect(branding.APP_STAGE_LABEL).toBe("Nightly");
-    expect(branding.APP_DISPLAY_NAME).toBe("T3 Code (Nightly)");
+    expect(branding.APP_DISPLAY_NAME).toBe("Second Brain (Nightly)");
   });
 
   it("does not label the latest hosted app channel", async () => {
@@ -58,7 +58,14 @@ describe("branding", () => {
     expect(branding.HOSTED_APP_CHANNEL).toBe("latest");
     expect(branding.HOSTED_APP_CHANNEL_LABEL).toBe("Latest");
     expect(branding.APP_STAGE_LABEL).toBe("Latest");
-    expect(branding.APP_DISPLAY_NAME).toBe("T3 Code");
+    expect(branding.APP_DISPLAY_NAME).toBe("Second Brain");
+  });
+
+  it("brands the browser surface as Second Brain without a stage suffix", async () => {
+    const branding = await import("./branding");
+
+    expect(branding.APP_BASE_NAME).toBe("Second Brain");
+    expect(branding.APP_DISPLAY_NAME).toMatch(/^Second Brain( \(Dev\))?$/);
   });
 
   it("ignores unknown hosted app channels", async () => {
