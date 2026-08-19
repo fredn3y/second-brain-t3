@@ -10,6 +10,7 @@ import {
   searchableSetting,
   searchSettings,
   SETTINGS_SEARCH_ITEMS,
+  SETTINGS_SECTION_LABELS,
   type SettingsSearchItem,
 } from "./settingsSearch";
 
@@ -251,7 +252,8 @@ describe("searchSettings", () => {
 
   it("ranks keybinding commands after other settings", () => {
     const ids = searchSettings("model").map((item) => item.id);
-    expect(ids[0]).toBe("default-model");
+    // Second Brain fork: Control Center "Model routing" also matches "model".
+    expect(ids.find((id) => id !== "model-routing")).toBe("default-model");
     expect(ids.indexOf("keybinding-modelPicker.toggle")).toBeGreaterThan(
       ids.indexOf("text-generation-model"),
     );
@@ -263,6 +265,14 @@ describe("searchSettings", () => {
       targetId: "keybindings",
     });
     expect(searchSettings("sidebar.toggle")[0]?.targetId).toBeUndefined();
+  });
+
+  it("finds the Control Center model routing section", () => {
+    expect(searchSettings("model routing")).toEqual([
+      expect.objectContaining({ id: "model-routing", to: "/settings/control-center" }),
+    ]);
+    expect(searchSettings("second brain").map((item) => item.id)).toEqual(["about-second-brain"]);
+    expect(SETTINGS_SECTION_LABELS["/settings/control-center"]).toBe("Control Center Settings");
   });
 
   it("keeps catalog result ids unique", () => {
