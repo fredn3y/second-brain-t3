@@ -22,6 +22,7 @@ export type SettingsPath =
   | "/settings/source-control"
   | "/settings/storage"
   | "/settings/connections"
+  | "/settings/control-center"
   | "/settings/archived";
 
 /**
@@ -93,6 +94,8 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/source-control": "Source Control",
   "/settings/storage": "Storage",
   "/settings/connections": "Connections",
+  // Second Brain fork: model routing for the Control Center automations.
+  "/settings/control-center": "Control Center Settings",
   "/settings/archived": "Archive",
 };
 
@@ -828,6 +831,22 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["pull request trusted environments shared credentials permissions read actions"],
   },
   {
+    id: "model-routing",
+    title: "Model routing",
+    to: "/settings/control-center",
+  },
+  {
+    id: "automations",
+    title: "Automations",
+    to: "/settings/control-center",
+    searchTerms: ["heartbeat recurring schedule drift inventory mail workflow frequency timer"],
+  },
+  {
+    id: "about-second-brain",
+    title: "About Second Brain",
+    to: "/settings/control-center",
+  },
+  {
     id: "archive",
     title: "Archived threads",
     to: "/settings/archived",
@@ -853,6 +872,8 @@ const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScop
   "/settings/storage": "project-defaults",
   "/settings/connections": "connections",
   "/settings/archived": "project-defaults",
+  // Second Brain fork: model routing and automations are server-wide.
+  "/settings/control-center": null,
 };
 
 /** Search keeps the selected target. A missing row can explain its owning scope instead. */
