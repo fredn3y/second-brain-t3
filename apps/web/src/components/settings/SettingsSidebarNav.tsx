@@ -13,6 +13,7 @@ import {
   ArchiveIcon,
   BlocksIcon,
   BotIcon,
+  BrainIcon,
   createLucideIcon,
   GitBranchIcon,
   PanelsTopLeftIcon,
@@ -84,6 +85,7 @@ const SETTINGS_SECTION_ICONS: Readonly<
   "/settings/integrations": BlocksIcon,
   "/settings/source-control": GitBranchIcon,
   "/settings/connections": Link2Icon,
+  "/settings/control-center": BrainIcon,
   "/settings/archived": ArchiveIcon,
 };
 
