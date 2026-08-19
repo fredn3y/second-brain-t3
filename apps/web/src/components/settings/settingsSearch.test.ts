@@ -16,6 +16,7 @@ import {
   searchSettings,
   SETTINGS_NAV_GROUPS,
   SETTINGS_SEARCH_ITEMS,
+  SETTINGS_SECTION_LABELS,
   sourceControlHostSearchItems,
   sourceControlHostSettingsSearchId,
   type SettingsSearchItem,
@@ -180,6 +181,14 @@ describe("searchSettings", () => {
       targetId: "keybindings",
     });
     expect(searchSettings("sidebar.toggle")[0]?.targetId).toBeUndefined();
+  });
+
+  it("finds the Control Center model routing section", () => {
+    expect(searchSettings("model routing")).toEqual([
+      expect.objectContaining({ id: "model-routing", to: "/settings/control-center" }),
+    ]);
+    expect(searchSettings("second brain").map((item) => item.id)).toEqual(["about-second-brain"]);
+    expect(SETTINGS_SECTION_LABELS["/settings/control-center"]).toBe("Control Center Settings");
   });
 
   it("keeps catalog result ids unique", () => {

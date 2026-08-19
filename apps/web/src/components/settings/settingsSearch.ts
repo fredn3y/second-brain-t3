@@ -37,6 +37,7 @@ export type SettingsPath =
   | "/settings/maintenance"
   | "/settings/labs"
   | "/settings/about"
+  | "/settings/control-center"
   | "/settings/archived";
 
 export type SettingsSearchScope =
@@ -107,6 +108,8 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/maintenance": "Maintenance",
   "/settings/labs": "Labs",
   "/settings/about": "About",
+  // Second Brain fork: model routing for the Control Center automations.
+  "/settings/control-center": "Control Center Settings",
   "/settings/archived": "Archive",
 };
 
@@ -150,7 +153,14 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
   },
   {
     heading: null,
-    paths: ["/settings/maintenance", "/settings/labs", "/settings/about", "/settings/archived"],
+    paths: [
+      "/settings/maintenance",
+      "/settings/labs",
+      "/settings/about",
+      // Second Brain fork: the Control Center Settings sidebar entry.
+      "/settings/control-center",
+      "/settings/archived",
+    ],
   },
 ];
 
@@ -1168,6 +1178,22 @@ export const SETTINGS_SEARCH_ITEMS = [
     secretsFeatureOnly: true,
   },
   {
+    id: "model-routing",
+    title: "Model routing",
+    to: "/settings/control-center",
+  },
+  {
+    id: "automations",
+    title: "Automations",
+    to: "/settings/control-center",
+    searchTerms: ["heartbeat recurring schedule drift inventory mail workflow frequency timer"],
+  },
+  {
+    id: "about-second-brain",
+    title: "About Second Brain",
+    to: "/settings/control-center",
+  },
+  {
     id: "archive",
     title: "Archived threads",
     to: "/settings/archived",
@@ -1202,6 +1228,8 @@ const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScop
   "/settings/labs": null,
   "/settings/about": null,
   "/settings/archived": "project-defaults",
+  // Second Brain fork: model routing and automations are server-wide.
+  "/settings/control-center": null,
 };
 
 const RENAMED_SETTINGS_PATHS: Readonly<Record<string, SettingsPath>> = {
