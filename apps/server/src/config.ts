@@ -95,6 +95,12 @@ export class ServerConfig extends Context.Service<
     readonly logWebSocketEvents: boolean;
     readonly tailscaleServeEnabled: boolean;
     readonly tailscaleServePort: number;
+    /**
+     * Second Brain fork: base URL of the loopback Control Center gateway whose
+     * `/api/models` registry backs Settings → Control Center Settings
+     * (`T3CODE_CONTROL_CENTER_GATEWAY_URL`; unset = `http://127.0.0.1:8765`).
+     */
+    readonly controlCenterGatewayUrl?: string | undefined;
   }
 >()("t3/config/ServerConfig") {
   /** @deprecated Import and use `layerTest` from this module. */

@@ -107,6 +107,10 @@ const EnvServerConfig = Config.all({
   otlpProtocol: Config.schema(OtlpProtocol, "T3CODE_OTLP_PROTOCOL").pipe(
     Config.withDefault("http/json"),
   ),
+  controlCenterGatewayUrl: Config.string("T3CODE_CONTROL_CENTER_GATEWAY_URL").pipe(
+    Config.option,
+    Config.map(Option.getOrUndefined),
+  ),
   mode: Config.schema(ServerConfig.RuntimeMode, "T3CODE_MODE").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
@@ -418,6 +422,7 @@ export const resolveServerConfig = (
       logWebSocketEvents,
       tailscaleServeEnabled,
       tailscaleServePort,
+      controlCenterGatewayUrl: env.controlCenterGatewayUrl,
     };
 
     return config;
