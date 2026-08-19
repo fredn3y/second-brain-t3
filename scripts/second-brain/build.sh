@@ -5,8 +5,7 @@
 # the upstream build (`vp run --filter t3 build`, which builds @t3tools/web first).
 # Only the server/web workspaces are installed — desktop/mobile/marketing are
 # not part of this deployment. The upstream build stamps the *development*
-# blueprint icons into dist/client; the service is a production surface, so the
-# production set is restored afterwards.
+# blueprint icons into dist/client; the Second Brain icons are restored afterwards.
 #
 # Usage: scripts/second-brain/build.sh 0.0.40 (isolated worktree; pnpm + Node 24)
 # Deploy/rollback: see docs/second-brain/deploy.md
@@ -34,12 +33,11 @@ pnpm install --frozen-lockfile \
 node scripts/update-release-package-versions.ts "$VERSION"
 node_modules/.bin/vp run --filter t3 build
 
-for pair in \
-  "t3-black-web-favicon.ico:favicon.ico" \
-  "t3-black-web-favicon-16x16.png:favicon-16x16.png" \
-  "t3-black-web-favicon-32x32.png:favicon-32x32.png" \
-  "t3-black-web-apple-touch-180.png:apple-touch-icon.png"; do
-  cp "assets/prod/${pair%%:*}" "apps/server/dist/client/${pair##*:}"
+# The upstream `cli build` stamps its development (blueprint) icons over
+# dist/client; restore the Second Brain icons from apps/web/public (brain emoji,
+# Noto Color Emoji artwork, Apache-2.0) so the served app keeps our branding.
+for f in favicon.ico favicon-16x16.png favicon-32x32.png apple-touch-icon.png; do
+  cp "apps/web/public/$f" "apps/server/dist/client/$f"
 done
 
 test -f apps/server/dist/bin.mjs
