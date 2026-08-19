@@ -41,7 +41,7 @@ changes need no T3 rebuild.
 - Tailscale Serve (tailnet-only): `https://codex-dev-01.tail7b2876.ts.net/` → `127.0.0.1:3773`
   (this server); path routes `/tasks`, `/docs`, `/AGENTS.md`, `/strategy.md` → the gateway on
   `127.0.0.1:8765` (mount prefix is stripped and re-added via the target path, so URLs are
-  unchanged); `:9443` → `127.0.0.1:3773` stays as the pilot compatibility route.
+  unchanged). The pilot `:9443` route was switched off on 2026-08-19.
 
 ## Build and deploy
 
@@ -70,5 +70,7 @@ URL in `~/.t3/userdata/logs/boot-service.log`).
    (drop the `T3CODE_CONTROL_CENTER_GATEWAY_URL` line), then
    `systemctl --user daemon-reload && systemctl --user restart t3code.service`.
 2. Back to the gateway at the tailnet root: `tailscale serve --bg --https=443 http://127.0.0.1:8765`
-   (the path routes can stay; they point at the same gateway). T3 remains on `:9443`.
-3. The gateway's own `/settings` page and `/api/models` are unchanged and keep working either way.
+   (the path routes can stay; they point at the same gateway) and, if T3 must be reachable
+   meanwhile, `tailscale serve --bg --https=9443 http://127.0.0.1:3773`.
+3. The gateway's `/api/models` is unchanged either way; its old `/settings` page was removed from the
+   second-brain repo on 2026-08-19, so model routing then means `scripts/tasks/model_for.py --set/--clear`.
