@@ -49,12 +49,15 @@ changes need no T3 rebuild.
 cd /home/fred/code/second-brain-t3
 git fetch upstream && git rebase upstream/main        # when taking upstream changes
 scripts/second-brain/build.sh                           # pnpm install (server/web) + vp build
-systemctl --user daemon-reload && systemctl --user restart t3code.service
-systemctl --user is-active t3code.service && ss -ltnp | grep 3773
+systemd-run --user --collect --unit "sbt3-deploy-$(date +%s)" \
+  /bin/bash "$PWD/scripts/second-brain/deploy-vps.sh" --report <artifact.md>
 ```
 
-A restart kills every agent session the server is running (they are its children) — do it
-between turns, not from inside a T3 thread you want to keep.
+`deploy-vps.sh` rewrites the drop-in (backup kept beside it), restarts the unit, waits for
+`127.0.0.1:3773`, rolls back to the previous drop-in if the fork does not come up, and appends a
+result block to `--report`. `--cutover-root` also (re)applies the Tailscale Serve routing above.
+A restart kills every agent session the server is running (they are its children), which is why
+the deploy runs as a detached transient unit rather than from inside a T3 thread.
 
 Pairing a new device: `node apps/server/dist/bin.mjs pair` (admin scopes are only on the startup
 URL in `~/.t3/userdata/logs/boot-service.log`).
