@@ -88,24 +88,26 @@ function SidebarBrand({ onBackdrop }: { onBackdrop: boolean }) {
       )}
       to="/"
     >
-      <T3Wordmark />
+      <span className="truncate text-sm font-semibold tracking-tight">Second Brain</span>
       <span
+        aria-label="built on T3 Code"
         className={cn(
-          "-translate-y-px truncate text-sm font-medium tracking-tight",
-          onBackdrop ? "text-white/70" : "text-muted-foreground",
+          "ml-0.5 flex items-center gap-0.5 text-[10px] font-medium tracking-tight",
+          onBackdrop ? "text-white/55" : "text-muted-foreground/70",
         )}
       >
-        Code
+        on <T3Wordmark />
       </span>
     </Link>
   );
 }
 
+/** Upstream attribution: Second Brain is a thin downstream of T3 Code (pingdotgg/t3code). */
 function T3Wordmark() {
   return (
     <svg
       aria-label="T3"
-      className="h-2.5 w-auto shrink-0"
+      className="h-2 w-auto shrink-0"
       viewBox="15.5309 37 94.3941 56.96"
       xmlns="http://www.w3.org/2000/svg"
     >
