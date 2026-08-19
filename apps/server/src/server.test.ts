@@ -4620,6 +4620,174 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
       }).pipe(Effect.provide(NodeHttpServer.layerTest)),
   );
 
+  // Second Brain fork: Settings → Control Center Settings talks to the loopback
+  // model-routing gateway only through this authenticated, same-origin relay.
+  const withControlCenterGatewayStub = (
+    respond: (input: {
+      readonly method: string;
+      readonly url: string;
+      readonly headers: Record<string, string | string[] | undefined>;
+      readonly body: string;
+    }) => { readonly status: number; readonly body: string },
+  ) =>
+    Effect.acquireRelease(
+      Effect.promise(async () => {
+        const NodeHttp = await import("node:http");
+        return await new Promise<{ readonly url: string; readonly close: () => Promise<void> }>(
+          (resolve, reject) => {
+            const server = NodeHttp.createServer((request, response) => {
+              const chunks: Buffer[] = [];
+              request.on("data", (chunk) => {
+                chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+              });
+              request.on("end", () => {
+                const reply = respond({
+                  method: request.method ?? "",
+                  url: request.url ?? "",
+                  headers: request.headers,
+                  body: Buffer.concat(chunks).toString("utf8"),
+                });
+                response.statusCode = reply.status;
+                response.setHeader("content-type", "application/json; charset=utf-8");
+                response.end(reply.body);
+              });
+            });
+            server.on("error", reject);
+            server.listen(0, "127.0.0.1", () => {
+              const address = server.address();
+              if (!address || typeof address === "string") {
+                reject(new Error("Expected TCP gateway stub address"));
+                return;
+              }
+              resolve({
+                url: `http://127.0.0.1:${address.port}`,
+                close: () =>
+                  new Promise<void>((resolveClose, rejectClose) => {
+                    server.close((error) => (error ? rejectClose(error) : resolveClose()));
+                  }),
+              });
+            });
+          },
+        );
+      }),
+      ({ close }) => Effect.promise(close),
+    );
+
+  it.effect("rejects unauthenticated Control Center model reads and writes", () =>
+    Effect.gen(function* () {
+      const upstream: string[] = [];
+      const gateway = yield* withControlCenterGatewayStub((input) => {
+        upstream.push(input.method);
+        return { status: 200, body: JSON.stringify({ ok: true, consumers: [] }) };
+      });
+      yield* buildAppUnderTest({ config: { controlCenterGatewayUrl: gateway.url } });
+
+      const read = yield* HttpClient.get("/api/control-center/models");
+      assert.equal(read.status, 401);
+      const write = yield* HttpClient.post("/api/control-center/models", {
+        headers: { "content-type": "application/json", origin: "http://localhost:5733" },
+        // @effect-diagnostics-next-line preferSchemaOverJson:off
+        body: HttpBody.text(
+          JSON.stringify({ consumer: "daybrief", reset: true }),
+          "application/json",
+        ),
+      });
+      assert.equal(write.status, 401);
+      assert.deepEqual(upstream, []);
+    }).pipe(Effect.provide(NodeHttpServer.layerTest)),
+  );
+
+  it.effect("relays Control Center model reads and writes for a paired session", () =>
+    Effect.gen(function* () {
+      const upstream: Array<{
+        readonly method: string;
+        readonly url: string;
+        readonly body: string;
+        readonly cookie: string | undefined;
+        readonly origin: string | undefined;
+      }> = [];
+      const gateway = yield* withControlCenterGatewayStub((input) => {
+        upstream.push({
+          method: input.method,
+          url: input.url,
+          body: input.body,
+          cookie: Array.isArray(input.headers.cookie)
+            ? input.headers.cookie.join(";")
+            : input.headers.cookie,
+          origin: Array.isArray(input.headers.origin)
+            ? input.headers.origin.join(";")
+            : input.headers.origin,
+        });
+        if (input.method === "POST" && input.body.includes("bogus")) {
+          return {
+            status: 400,
+            body: JSON.stringify({ ok: false, error: "unknown consumer: bogus" }),
+          };
+        }
+        return {
+          status: 200,
+          body: JSON.stringify({ ok: true, consumers: [{ consumer: "daybrief" }] }),
+        };
+      });
+      yield* buildAppUnderTest({ config: { controlCenterGatewayUrl: gateway.url } });
+      const cookie = yield* getAuthenticatedSessionCookieHeader();
+
+      const read = yield* HttpClient.get("/api/control-center/models", { headers: { cookie } });
+      assert.equal(read.status, 200);
+      assert.deepEqual(yield* read.json, { ok: true, consumers: [{ consumer: "daybrief" }] });
+
+      const write = yield* HttpClient.post("/api/control-center/models", {
+        headers: { cookie, "content-type": "application/json", origin: "http://localhost:5733" },
+        // @effect-diagnostics-next-line preferSchemaOverJson:off
+        body: HttpBody.text(
+          JSON.stringify({ consumer: "daybrief", reset: true }),
+          "application/json",
+        ),
+      });
+      assert.equal(write.status, 200);
+
+      const rejected = yield* HttpClient.post("/api/control-center/models", {
+        headers: { cookie, "content-type": "application/json" },
+        // @effect-diagnostics-next-line preferSchemaOverJson:off
+        body: HttpBody.text(JSON.stringify({ consumer: "bogus" }), "application/json"),
+      });
+      assert.equal(rejected.status, 400);
+      assert.deepEqual(yield* rejected.json, { ok: false, error: "unknown consumer: bogus" });
+
+      const malformed = yield* HttpClient.post("/api/control-center/models", {
+        headers: { cookie, "content-type": "application/json" },
+        body: HttpBody.text("[1, 2, 3]", "application/json"),
+      });
+      assert.equal(malformed.status, 400);
+
+      assert.deepEqual(
+        upstream.map((entry) => [entry.method, entry.url, entry.body]),
+        [
+          ["GET", "/api/models", ""],
+          ["POST", "/api/models", JSON.stringify({ consumer: "daybrief", reset: true })],
+          ["POST", "/api/models", JSON.stringify({ consumer: "bogus" })],
+        ],
+      );
+      // The browser's session cookie and Origin never reach the gateway: the
+      // relay speaks to it as a plain loopback client.
+      assert.isTrue(
+        upstream.every((entry) => entry.cookie === undefined && entry.origin === undefined),
+      );
+    }).pipe(Effect.provide(NodeHttpServer.layerTest)),
+  );
+
+  it.effect("reports an unreachable Control Center gateway as 502 without leaking details", () =>
+    Effect.gen(function* () {
+      yield* buildAppUnderTest({ config: { controlCenterGatewayUrl: "http://127.0.0.1:9" } });
+      const cookie = yield* getAuthenticatedSessionCookieHeader();
+      const response = yield* HttpClient.get("/api/control-center/models", { headers: { cookie } });
+      assert.equal(response.status, 502);
+      const body = (yield* response.json) as { readonly ok: boolean; readonly error: string };
+      assert.equal(body.ok, false);
+      assert.include(body.error, "gateway");
+    }).pipe(Effect.provide(NodeHttpServer.layerTest)),
+  );
+
   it.effect("routes websocket rpc server.upsertKeybinding", () =>
     Effect.gen(function* () {
       const rule: KeybindingRule = {
