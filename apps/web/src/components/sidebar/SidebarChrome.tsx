@@ -91,17 +91,15 @@ function SidebarBrand({ onBackdrop }: { onBackdrop: boolean }) {
       )}
       to="/"
     >
-      {/* Center the visible capitals, without the font's ascender/descender space. */}
-      <span className="inline-flex min-w-0 items-baseline gap-1 text-sm font-medium tracking-tight">
-        <T3Wordmark aria-label="T3" className="h-[1cap] w-auto shrink-0" />
-        <span
-          className={cn(
-            "truncate [text-box:trim-both_cap_alphabetic]",
-            onBackdrop ? "text-white/70" : "text-muted-foreground",
-          )}
-        >
-          Code
-        </span>
+      <span className="truncate text-sm font-semibold tracking-tight">Second Brain</span>
+      <span
+        aria-label="built on T3 Code"
+        className={cn(
+          "ml-0.5 flex items-center gap-0.5 text-[10px] font-medium tracking-tight",
+          onBackdrop ? "text-white/55" : "text-muted-foreground/70",
+        )}
+      >
+        on <T3Wordmark aria-label="T3" className="h-2 w-auto shrink-0" />
       </span>
     </Link>
   );
