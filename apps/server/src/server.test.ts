@@ -5501,8 +5501,8 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
       assert.equal(read.status, 401);
       const write = yield* HttpClient.post("/api/control-center/models", {
         headers: { "content-type": "application/json", origin: "http://localhost:5733" },
-        // @effect-diagnostics-next-line preferSchemaOverJson:off
         body: HttpBody.text(
+          // @effect-diagnostics-next-line preferSchemaOverJson:off
           JSON.stringify({ consumer: "daybrief", reset: true }),
           "application/json",
         ),
@@ -5553,8 +5553,8 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
 
       const write = yield* HttpClient.post("/api/control-center/models", {
         headers: { cookie, "content-type": "application/json", origin: "http://localhost:5733" },
-        // @effect-diagnostics-next-line preferSchemaOverJson:off
         body: HttpBody.text(
+          // @effect-diagnostics-next-line preferSchemaOverJson:off
           JSON.stringify({ consumer: "daybrief", reset: true }),
           "application/json",
         ),
@@ -5579,7 +5579,9 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
         upstream.map((entry) => [entry.method, entry.url, entry.body]),
         [
           ["GET", "/api/models", ""],
+          // @effect-diagnostics-next-line preferSchemaOverJson:off
           ["POST", "/api/models", JSON.stringify({ consumer: "daybrief", reset: true })],
+          // @effect-diagnostics-next-line preferSchemaOverJson:off
           ["POST", "/api/models", JSON.stringify({ consumer: "bogus" })],
         ],
       );
