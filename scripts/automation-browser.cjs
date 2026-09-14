@@ -109,6 +109,12 @@ async function run() {
   await check('Astra override and model-specific efforts use registry snapshot', async () => {
     assert.equal(await page.getByRole('combobox', { name: 'Daybrief model', exact: true }).innerText(), catalog.codex.labels['gpt-6-astra']);
     assert.equal(await page.getByRole('combobox', { name: 'Daybrief effort', exact: true }).innerText(), 'xhigh');
+    await details('Daybrief').evaluate(el => el.scrollIntoView({ block: 'start' }));
+    await page.screenshot({ path: path.join(evidence, 'desktop-details.png') });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await details('Daybrief').evaluate(el => el.scrollIntoView({ block: 'start' }));
+    await page.screenshot({ path: path.join(evidence, 'mobile.png') });
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await page.getByRole('combobox', { name: 'Daybrief effort', exact: true }).click();
     await visible(page.getByRole('option').first());
     assert.deepEqual(await page.getByRole('option').allTextContents(), catalog.codex.model_efforts['gpt-6-astra']);
@@ -168,7 +174,7 @@ async function run() {
   await check('Narrow layout keeps controls inside viewport', async () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.getByRole('combobox', { name: 'Daybrief model', exact: true }).scrollIntoViewIfNeeded();
-    await page.screenshot({ path: path.join(evidence, 'mobile.png') });
+    await page.screenshot({ path: path.join(evidence, 'mobile-error-state.png') });
     const overflow = await page.evaluate(() => [...document.querySelectorAll('button,input,[role="combobox"]')].filter(el => {
       const box = el.getBoundingClientRect(); return box.width > 0 && box.height > 0 && (box.right > innerWidth + 1 || box.left < -1);
     }).map(el => ({ text: el.getAttribute('aria-label') || el.textContent, box: el.getBoundingClientRect().toJSON() })));
