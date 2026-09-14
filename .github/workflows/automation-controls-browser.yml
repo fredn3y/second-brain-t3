@@ -1,0 +1,64 @@
+name: Automations browser acceptance
+on:
+  push:
+    branches: [codex/automation-controls-validation-2026-09-14]
+    paths:
+      - '.github/workflows/automation-controls-browser.yml'
+      - 'scripts/automation-browser*'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: automation-controls-browser
+  cancel-in-progress: false
+jobs:
+  browser:
+    if: github.repository == 'fredn3y/second-brain-t3'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: automations-validation-build-2d4b7c9e6e630982381c9503a35502b2ba99bd9d
+          run-id: 34868205149
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/automation-built
+      - name: Install isolated browser test dependency on this runner only
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          test "$GITHUB_REPOSITORY" = fredn3y/second-brain-t3
+          test -f "$RUNNER_TEMP/automation-built/client/index.html"
+          node --version
+          npm install --prefix "$RUNNER_TEMP/automation-browser" --ignore-scripts --no-audit --no-fund playwright@1.63.0
+          node "$RUNNER_TEMP/automation-browser/node_modules/playwright/cli.js" install chromium
+      - name: Check unchanged build with synthetic responses and no real backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/automation-browser-evidence"
+          sudo systemd-run --wait --pipe --collect --service-type=exec \
+            --unit="automations-browser-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --uid="$(id -u)" --gid="$(id -g)" --working-directory="$PWD" \
+            --property=MemoryHigh=2G --property=MemoryMax=3G \
+            --property=MemorySwapMax=0 --property=CPUQuota=200% \
+            --property=TasksMax=256 --property=RuntimeMaxSec=5min \
+            --property=TimeoutStopSec=10s \
+            /usr/bin/env "PATH=$PATH" "HOME=$HOME" CI=true \
+            "RUNNER_TEMP=$RUNNER_TEMP" NODE_OPTIONS=--max-old-space-size=1024 \
+            node scripts/automation-browser.cjs \
+            2>&1 | tee "$RUNNER_TEMP/automation-browser-evidence/run.log"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: automation-browser-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/automation-browser-evidence/
+          if-no-files-found: warn
+          retention-days: 7

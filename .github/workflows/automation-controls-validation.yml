@@ -5,6 +5,11 @@ name: Automations isolated validation
 on:
   push:
     branches: [codex/automation-controls-validation-2026-09-14]
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
 
 permissions:
   contents: read

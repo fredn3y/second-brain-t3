@@ -1,0 +1,126 @@
+{
+  "codex": {
+    "label": "Codex",
+    "models": [
+      "gpt-6-astra",
+      "gpt-5.6-sol",
+      "gpt-5.6-terra",
+      "gpt-5.6-luna",
+      "gpt-5.5",
+      "gpt-5.3-codex-spark"
+    ],
+    "efforts": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max",
+      "ultra"
+    ],
+    "model_efforts": {
+      "gpt-6-astra": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+        "ultra"
+      ],
+      "gpt-5.6-sol": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+        "ultra"
+      ],
+      "gpt-5.6-terra": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+        "ultra"
+      ],
+      "gpt-5.6-luna": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "gpt-5.5": [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+      ],
+      "gpt-5.3-codex-spark": [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+      ]
+    },
+    "labels": {
+      "gpt-6-astra": "GPT-6 Astra",
+      "gpt-5.6-sol": "GPT-5.6 Sol",
+      "gpt-5.6-terra": "GPT-5.6 Terra",
+      "gpt-5.6-luna": "GPT-5.6 Luna",
+      "gpt-5.5": "GPT-5.5",
+      "gpt-5.3-codex-spark": "GPT-5.3 Codex Spark"
+    }
+  },
+  "claude": {
+    "label": "Claude Code",
+    "models": [
+      "opus",
+      "sonnet",
+      "haiku",
+      "fable"
+    ],
+    "efforts": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "model_efforts": {
+      "opus": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "sonnet": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "haiku": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "fable": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ]
+    },
+    "labels": {
+      "opus": "Opus 5",
+      "sonnet": "Sonnet 5",
+      "haiku": "Haiku 4.5",
+      "fable": "Fable 5"
+    }
+  }
+}
