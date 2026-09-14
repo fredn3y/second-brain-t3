@@ -64,7 +64,7 @@ jobs:
               "$@" 2>&1 | tee "$RUNNER_TEMP/automation-validation/$phase.log"
           }
 
-          run_limited install pnpm install --frozen-lockfile \
+          run_limited install vp install --frozen-lockfile \
             --filter @t3tools/monorepo --filter 't3...' \
             --filter '@t3tools/web...' --filter @t3tools/scripts
           run_limited stamp node scripts/update-release-package-versions.ts 0.0.40
