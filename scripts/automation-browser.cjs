@@ -110,10 +110,12 @@ async function run() {
     assert.equal(await page.getByRole('combobox', { name: 'Daybrief model', exact: true }).innerText(), catalog.codex.labels['gpt-6-astra']);
     assert.equal(await page.getByRole('combobox', { name: 'Daybrief effort', exact: true }).innerText(), 'xhigh');
     await page.getByRole('combobox', { name: 'Daybrief effort', exact: true }).click();
+    await visible(page.getByRole('option').first());
     assert.deepEqual(await page.getByRole('option').allTextContents(), catalog.codex.model_efforts['gpt-6-astra']);
     await page.getByRole('option', { name: 'ultra', exact: true }).click();
     await choose('Daybrief model', catalog.codex.labels['gpt-5.6-luna']);
     await page.getByRole('combobox', { name: 'Daybrief effort', exact: true }).click();
+    await visible(page.getByRole('option').first());
     assert.deepEqual(await page.getByRole('option').allTextContents(), catalog.codex.model_efforts['gpt-5.6-luna']);
     await page.getByRole('option', { name: 'max', exact: true }).click();
     await details('Daybrief').getByRole('button', { name: 'Save', exact: true }).click();
