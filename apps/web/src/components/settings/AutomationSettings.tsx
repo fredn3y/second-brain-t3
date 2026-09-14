@@ -88,7 +88,7 @@ function ScheduleEditor({
           value={draft.time ?? ""}
           aria-label={`${job.label} time`}
           disabled={busy}
-          className="h-8 w-28"
+          className="h-8 w-36"
           onChange={(event) => setDraft({ ...draft, time: event.target.value })}
         />
       ) : null}
