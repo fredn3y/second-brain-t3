@@ -5,6 +5,7 @@ import {
   searchableSetting,
   searchSettings,
   SETTINGS_SEARCH_ITEMS,
+  SETTINGS_SECTION_LABELS,
   type SettingsSearchItem,
 } from "./settingsSearch";
 
@@ -183,6 +184,14 @@ describe("searchSettings", () => {
       "auto-settle-merged-threads",
       "days-before-auto-settle",
     ]);
+  });
+
+  it("finds the Control Center model routing section", () => {
+    expect(searchSettings("model routing")).toEqual([
+      expect.objectContaining({ id: "model-routing", to: "/settings/control-center" }),
+    ]);
+    expect(searchSettings("second brain").map((item) => item.id)).toEqual(["about-second-brain"]);
+    expect(SETTINGS_SECTION_LABELS["/settings/control-center"]).toBe("Control Center Settings");
   });
 
   it("keeps catalog result ids unique", () => {

@@ -1,0 +1,107 @@
+# PROPOSAL ONLY: copy to .github/workflows/automation-controls-validation.yml
+# on the approved validation branch. Do not install or run this on the VPS.
+name: Automations isolated validation
+
+on:
+  push:
+    branches: [codex/automation-controls-validation-2026-09-14]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: automation-controls-validation
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.repository == 'fredn3y/second-brain-t3'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # Keep the setup action version used by this fork's existing CI.
+      # Its moving v1 tag is frozen at v1.15.0; name that version explicitly.
+      - uses: voidzero-dev/setup-vp@v1.15.0
+        timeout-minutes: 5
+        with:
+          node-version-file: package.json
+          version-file: package.json
+          run-install: false
+          cache: false
+
+      - name: Sequential checks on this disposable runner only
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_ACTIONS:-}" = true
+          test "${RUNNER_ENVIRONMENT:-}" = github-hosted
+          test "${GITHUB_REPOSITORY:-}" = fredn3y/second-brain-t3
+          test "${GITHUB_REF:-}" = refs/heads/codex/automation-controls-validation-2026-09-14
+          test "$(awk '/MemTotal:/ {print $2}' /proc/meminfo)" -ge 14000000
+          mkdir -p "$RUNNER_TEMP/automation-validation"
+          git rev-parse HEAD > "$RUNNER_TEMP/automation-validation/source-commit.txt"
+
+          run_limited() {
+            local phase="$1"
+            shift
+            sudo systemd-run --wait --pipe --collect --service-type=exec \
+              --unit="automations-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${phase}" \
+              --uid="$(id -u)" --gid="$(id -g)" --working-directory="$PWD" \
+              --property=MemoryHigh=8G --property=MemoryMax=10G \
+              --property=MemorySwapMax=0 --property=CPUQuota=200% \
+              --property=TasksMax=256 --property=RuntimeMaxSec=15min \
+              --property=TimeoutStopSec=10s \
+              /usr/bin/env "PATH=$PATH" CI=true GOMAXPROCS=2 GOMEMLIMIT=6GiB \
+              NODE_OPTIONS=--max-old-space-size=6144 \
+              "T3CODE_HOME=$RUNNER_TEMP/automation-test-home" \
+              "$@" 2>&1 | tee "$RUNNER_TEMP/automation-validation/$phase.log"
+          }
+
+          run_limited install pnpm install --frozen-lockfile \
+            --filter @t3tools/monorepo --filter 't3...' \
+            --filter '@t3tools/web...' --filter @t3tools/scripts
+          run_limited stamp node scripts/update-release-package-versions.ts 0.0.40
+
+          cd apps/web
+          run_limited web-tests ../../node_modules/.bin/vp test run --project unit \
+            src/components/settings/automationSettings.test.ts \
+            src/components/settings/controlCenterModels.test.ts \
+            src/components/settings/settingsSearch.test.ts \
+            --maxWorkers=1 --maxConcurrency=1 --no-file-parallelism --retry=0
+          cd ../server
+          run_limited relay-tests ../../node_modules/.bin/vp test run src/server.test.ts \
+            -t 'Control Center' --maxWorkers=1 --maxConcurrency=1 --no-file-parallelism --retry=0
+          cd ../..
+
+          run_limited web-types node_modules/.bin/tsgo --noEmit -p apps/web/tsconfig.json
+          run_limited server-types node_modules/.bin/tsgo --noEmit -p apps/server/tsconfig.json
+          run_limited build node_modules/.bin/vp run --filter t3 build
+          for icon in favicon.ico favicon-16x16.png favicon-32x32.png apple-touch-icon.png; do
+            cp "apps/web/public/$icon" "apps/server/dist/client/$icon"
+          done
+          test -f apps/server/dist/bin.mjs
+          test -f apps/server/dist/client/index.html
+          run_limited version node apps/server/dist/bin.mjs --version
+          grep -Fx 't3 v0.0.40' "$RUNNER_TEMP/automation-validation/version.log"
+
+      - name: Preserve diagnostics, including on failure
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: automations-validation-logs-${{ github.sha }}
+          path: ${{ runner.temp }}/automation-validation/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Preserve successful build for later review
+        if: success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: automations-validation-build-${{ github.sha }}
+          path: apps/server/dist/
+          if-no-files-found: error
+          retention-days: 7
