@@ -109,7 +109,7 @@ const withAuthErrorResponses = <R>(
     }),
   );
 
-const readRoute = (path: string, gatewayPath: string) =>
+const readRoute = (path: HttpRouter.PathInput, gatewayPath: string) =>
   HttpRouter.add(
     "GET",
     path,
@@ -124,7 +124,7 @@ const readRoute = (path: string, gatewayPath: string) =>
     ),
   );
 
-const writeRoute = (path: string, gatewayPath: string) =>
+const writeRoute = (path: HttpRouter.PathInput, gatewayPath: string) =>
   HttpRouter.add(
     "POST",
     path,
