@@ -93,7 +93,7 @@ async function run() {
   await page.goto(`${origin}/settings/control-center`, { waitUntil: 'domcontentloaded' });
   await check('Desktop loads real Settings page with failed scan visible', async () => {
     await visible(page.getByRole('heading', { name: 'Automations', exact: true }));
-    await visible(details('Drift scan').getByText('Failed', { exact: false }));
+    await visible(details('Drift scan').locator('summary').getByText('Failed', { exact: false }));
     await page.screenshot({ path: path.join(evidence, 'desktop.png'), fullPage: true });
   });
   await check('Failure report, dependency warning and duplicate brief gate', async () => {
