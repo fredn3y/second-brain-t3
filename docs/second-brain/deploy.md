@@ -46,15 +46,23 @@ changes need no T3 rebuild.
 
 ## Stable updates and cutover
 
-The updater lives in the Second Brain repository under `scripts/maintenance/t3_update/`.
-Its policy and operating instructions are in `docs/tools/t3-stable-updater.md` there.
-The user timer `t3-stable-update.timer` prepares new releases; each live cutover requires
-Fred's attended approval of the exact immutable build. A delegated workroom cannot self-approve.
+**`main` is the fork.** It is the official stable release it is based on plus every Second Brain
+commit above it, in a straight line with no merges, however many there are. To change the fork,
+commit to `main`. Uncommitted source is never deployable: staging accepts only the build's own
+version stamps.
 
-The canonical checkout is never rebased or rebuilt by the updater. It fetches GitHub's official
-`pingdotgg/t3code` latest release, rejects drafts, prereleases and every non-stable tag shape,
-then replays the protected fork commits in an isolated worktree. Conflicts stop preparation for
-review. The deployed manifest carries forward reviewed adaptations for the next stable rebase.
+The updater lives in the Second Brain repository under `scripts/maintenance/t3_stable_updater/`.
+The user timer `t3-stable-update.timer` builds a candidate whenever upstream publishes a new
+stable release or `main` moves. Each live cutover requires Fred's attended approval of the exact
+immutable build; a delegated workroom cannot self-approve.
+
+The updater fetches GitHub's official `pingdotgg/t3code` latest release and rejects drafts,
+prereleases and every non-stable tag shape. It replays `main`'s commits onto that release in an
+isolated worktree; the order and titles must survive, and conflicts stop preparation for review.
+The canonical checkout is untouched until the cutover has been verified healthy. Then `main` moves
+to the replayed tip and is pushed with a lease on the tip it was prepared from. The previous tip
+is kept as `backup/main-<sha12>`, locally and on GitHub. If `main` gained commits in the meantime,
+the sync is skipped and reported instead.
 
 Build an isolated worktree with the **exact release version**:
 
