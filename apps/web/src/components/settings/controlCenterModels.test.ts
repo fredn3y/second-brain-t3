@@ -7,6 +7,7 @@ import {
   engineChoices,
   modelChoices,
   overrideCount,
+  routeChoiceSummary,
   routeDraftEquals,
   routeDraftFromLive,
   routeProvenanceLabel,
@@ -115,5 +116,13 @@ describe("controlCenterModels", () => {
     expect(routeProvenanceLabel(titles)).toMatch(/^Live override · .*2026.* UTC$/);
     expect(routeProvenanceLabel({ ...titles, updated_at: "garbage" })).toBe("Live override");
     expect(overrideCount({ ok: true, catalog: CATALOG, consumers: [daybrief, titles] })).toBe(1);
+  });
+  it("summarises a route as model label and readable effort", () => {
+    expect(
+      routeChoiceSummary(CATALOG, { engine: "codex", model: "gpt-5.6-sol", effort: "xhigh" }),
+    ).toBe("GPT-5.6 Sol · Extra high");
+    expect(routeChoiceSummary(CATALOG, { engine: "claude", model: "haiku", effort: "" })).toBe(
+      "Haiku 4.5 · Auto",
+    );
   });
 });
