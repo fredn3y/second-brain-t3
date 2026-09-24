@@ -7,7 +7,7 @@ import { resolvePrimaryEnvironmentHttpUrl } from "../../environments/primary/tar
  * model registry (`scripts/tasks/cc/models.py`), whose payload shape is mirrored
  * in the types below. Pure helpers are kept here so the panel stays dumb.
  */
-export const CONTROL_CENTER_MODELS_PATH = "/api/control-center/models";
+const CONTROL_CENTER_MODELS_PATH = "/api/control-center/models";
 
 export interface ControlCenterEngineCatalog {
   readonly label: string;
@@ -52,7 +52,7 @@ export interface ControlCenterChoice {
   readonly label: string;
 }
 
-export const AUTOMATIC_EFFORT_LABEL = "Automatic";
+const AUTOMATIC_EFFORT_LABEL = "Automatic";
 
 export function routeDraftFromLive(route: ControlCenterRoute): ControlCenterRouteDraft {
   return { engine: route.engine, model: route.model, effort: route.effort };
@@ -81,6 +81,21 @@ export function modelChoices(
   return spec.models.map((model) => ({ value: model, label: spec.labels[model] ?? model }));
 }
 
+const EFFORT_LABELS: Readonly<Record<string, string>> = {
+  "": AUTOMATIC_EFFORT_LABEL,
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  xhigh: "Extra high",
+  max: "Max",
+  ultra: "Ultra",
+};
+
+/** Human label for an effort id; unknown future levels show their id. */
+function effortLabel(effort: string): string {
+  return EFFORT_LABELS[effort] ?? effort;
+}
+
 /** Effort levels a model supports; a blank "Automatic" entry leads when the runner may omit the flag. */
 export function effortChoices(
   catalog: ControlCenterModelsState["catalog"],
@@ -88,8 +103,17 @@ export function effortChoices(
   effortRequired: boolean,
 ): ReadonlyArray<ControlCenterChoice> {
   const efforts = catalog[draft.engine]?.model_efforts[draft.model] ?? [];
-  const levels = efforts.map((effort) => ({ value: effort, label: effort }));
+  const levels = efforts.map((effort) => ({ value: effort, label: effortLabel(effort) }));
   return effortRequired ? levels : [{ value: "", label: AUTOMATIC_EFFORT_LABEL }, ...levels];
+}
+
+/** One-line answer to "what does this run?", e.g. "GPT-6 Sol · High". */
+export function routeChoiceSummary(
+  catalog: ControlCenterModelsState["catalog"],
+  choice: ControlCenterRouteDraft,
+): string {
+  const model = catalog[choice.engine]?.labels[choice.model] ?? choice.model;
+  return `${model} · ${choice.effort ? effortLabel(choice.effort) : "Auto"}`;
 }
 
 /** Keep the current model/effort when the new engine offers them; otherwise fall back to its first entries. */
@@ -119,10 +143,6 @@ export function draftForModel(
   return { engine: draft.engine, model, effort };
 }
 
-export function choiceLabel(choices: ReadonlyArray<ControlCenterChoice>, value: string): string {
-  return choices.find((choice) => choice.value === value)?.label ?? value;
-}
-
 const PROVENANCE_TIME_FORMAT = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
   timeStyle: "short",
@@ -141,7 +161,7 @@ export function overrideCount(state: ControlCenterModelsState): number {
   return state.consumers.filter((route) => route.source === "override").length;
 }
 
-export class ControlCenterModelsError extends Error {
+class ControlCenterModelsError extends Error {
   readonly status: number;
   constructor(message: string, status: number) {
     super(message);
