@@ -44,7 +44,7 @@ export interface AutomationsState {
 }
 
 export function automationTime(value: string | null): string {
-  if (!value) return "—";
+  if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.valueOf())) return value;
   return new Intl.DateTimeFormat("en-GB", {
@@ -85,4 +85,46 @@ export function editAutomation(
     },
     PATH,
   );
+}
+
+/** Compact London time for a run line: "15:27" today, otherwise "Thu 07:00". */
+export function shortRunTime(value: string | null, now: Date = new Date()): string {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return value;
+  const day = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", dateStyle: "short" });
+  const time = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+  if (day.format(date) === day.format(now)) return time;
+  const weekday = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    weekday: "short",
+  }).format(date);
+  return `${weekday} ${time}`;
+}
+
+export type RunTone = "failed" | "running" | "ok" | "idle";
+
+/** Last-run cell: what happened, when, and how loudly to show it. */
+export function lastRunSummary(
+  job: AutomationJob,
+  now: Date = new Date(),
+): { readonly text: string; readonly tone: RunTone } {
+  if (!job.installed) return { text: "Not installed", tone: "idle" };
+  const when = shortRunTime(job.last_finish ?? job.last_start, now);
+  switch (job.status) {
+    case "failed":
+      return { text: `Failed · ${when}`, tone: "failed" };
+    case "running":
+      return { text: `Running since ${shortRunTime(job.last_start, now)}`, tone: "running" };
+    case "launched":
+      return { text: `Thread · ${when}`, tone: "ok" };
+    case "finished":
+      return { text: `Done · ${when}`, tone: "ok" };
+    default:
+      return { text: "No run yet", tone: "idle" };
+  }
 }
