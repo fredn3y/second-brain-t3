@@ -81,6 +81,21 @@ export function modelChoices(
   return spec.models.map((model) => ({ value: model, label: spec.labels[model] ?? model }));
 }
 
+const EFFORT_LABELS: Readonly<Record<string, string>> = {
+  "": AUTOMATIC_EFFORT_LABEL,
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  xhigh: "Extra high",
+  max: "Max",
+  ultra: "Ultra",
+};
+
+/** Human label for an effort id; unknown future levels show their id. */
+export function effortLabel(effort: string): string {
+  return EFFORT_LABELS[effort] ?? effort;
+}
+
 /** Effort levels a model supports; a blank "Automatic" entry leads when the runner may omit the flag. */
 export function effortChoices(
   catalog: ControlCenterModelsState["catalog"],
@@ -88,8 +103,17 @@ export function effortChoices(
   effortRequired: boolean,
 ): ReadonlyArray<ControlCenterChoice> {
   const efforts = catalog[draft.engine]?.model_efforts[draft.model] ?? [];
-  const levels = efforts.map((effort) => ({ value: effort, label: effort }));
+  const levels = efforts.map((effort) => ({ value: effort, label: effortLabel(effort) }));
   return effortRequired ? levels : [{ value: "", label: AUTOMATIC_EFFORT_LABEL }, ...levels];
+}
+
+/** One-line answer to "what does this run?", e.g. "GPT-6 Sol · High". */
+export function routeChoiceSummary(
+  catalog: ControlCenterModelsState["catalog"],
+  choice: ControlCenterRouteDraft,
+): string {
+  const model = catalog[choice.engine]?.labels[choice.model] ?? choice.model;
+  return `${model} · ${choice.effort ? effortLabel(choice.effort) : "Auto"}`;
 }
 
 /** Keep the current model/effort when the new engine offers them; otherwise fall back to its first entries. */
