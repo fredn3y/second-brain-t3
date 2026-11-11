@@ -647,6 +647,58 @@ describe("pools", () => {
     ]);
   });
 
+  it.each([
+    ["merges into the only e-mail in its workspace", {}, ["env-a:codex"]],
+    [
+      "keeps apart when two e-mails share the workspace",
+      { otherEmail: "b@example.com" },
+      ["env-a:codex", "hub:codex.json:ws-1", "hub:other.json:ws-1"],
+    ],
+    [
+      "keeps apart when the windows reset at different times",
+      { hubResetsAt: "2026-09-07T12:00:00.000Z" },
+      ["env-a:codex", "hub:codex.json:ws-1"],
+    ],
+  ] as const)(
+    "a login without e-mail or fingerprint %s",
+    (_name, overrides: { otherEmail?: string; hubResetsAt?: string }, keys) => {
+      const usage = (usedPercent: number, resetsAt: string = weekly.resetsAt) => ({
+        checkedAt,
+        windows: [{ ...weekly, usedPercent, resetsAt }],
+      });
+      const native = provider({
+        auth: { status: "authenticated", workspaceId: "ws-1" },
+        usageLimits: usage(58),
+      });
+      const hubAccount = (id: string, email: string) => ({
+        id,
+        driver: ProviderDriverKind.make("codex"),
+        email,
+        workspaceId: "ws-1",
+        usageLimits: usage(58.5, overrides.hubResetsAt),
+      });
+      const accounts = [
+        hubAccount("codex.json", "a@example.com"),
+        ...(overrides.otherEmail ? [hubAccount("other.json", overrides.otherEmail)] : []),
+      ];
+      const input = new Map([
+        [
+          EnvironmentId.make("env-a"),
+          {
+            ...laptop,
+            serverConfig: {
+              providers: [native],
+              usageLimitSources: [{ ...source, accounts }],
+            },
+          },
+        ],
+      ]);
+      const merged = collectLimitAccounts(input);
+      expect(merged.map((account) => account.key)).toEqual(keys);
+      expect(merged[0]?.email).toBe(keys.length === 1 ? "a@example.com" : undefined);
+    },
+  );
+
   it("keys a hub account without an email by hub, so two environments on one hub share it", () => {
     const seat = {
       id: "claude-team-seat.json",

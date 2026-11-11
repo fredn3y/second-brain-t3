@@ -214,18 +214,55 @@ const nativeReport = (provider: ServerProvider): AccountReport => ({
   usageLimits: provider.usageLimits,
 });
 
+const RESET_TOLERANCE_MS = MINUTE;
+
+// Same quota read twice: every window matches one of the other's on reset and use.
+function sameAllowance(
+  driver: ServerProvider["driver"],
+  left: ServerProviderUsageLimits | undefined,
+  right: ServerProviderUsageLimits | undefined,
+): boolean {
+  if (!left?.windows.length || !right?.windows.length) return false;
+  return left.windows.every((window) => {
+    const resetsAt = Date.parse(window.resetsAt ?? "");
+    return right.windows.some(
+      (other) =>
+        poolKey(driver, other) === poolKey(driver, window) &&
+        Math.abs(Date.parse(other.resetsAt ?? "") - resetsAt) <= RESET_TOLERANCE_MS &&
+        Math.abs(other.usedPercent - window.usedPercent) <= 1,
+    );
+  });
+}
+
 // Include every enabled login, even unreadable workspaces.
 function accountKeyResolver(reports: Iterable<AccountReport>) {
   const workspaces = new Map<string, Set<string>>();
+  const workspaceOwners = new Map<string, Map<string, AccountReport[]>>();
   for (const report of reports) {
     const key = accountKey(report.driver, report.email, report.usageLimits);
     if (key && report.workspaceId) {
       workspaces.set(key, (workspaces.get(key) ?? new Set()).add(report.workspaceId));
+      const workspace = `${report.driver}:${report.workspaceId}`;
+      const owners = workspaceOwners.get(workspace) ?? new Map();
+      workspaceOwners.set(workspace, owners.set(key, [...(owners.get(key) ?? []), report]));
     }
   }
+  // A login without e-mail or fingerprint (native Codex behind a proxy) joins the one
+  // account that owns its workspace, only when both read the same allowance.
+  const ownerOf = (report: AccountReport): string | null => {
+    const owners = workspaceOwners.get(`${report.driver}:${report.workspaceId}`);
+    const [owner, ...others] = owners ?? [];
+    if (!owner || others.length > 0) return null;
+    const [key, owned] = owner;
+    return owned.some((candidate) =>
+      sameAllowance(report.driver, report.usageLimits, candidate.usageLimits),
+    )
+      ? `${key}:${report.workspaceId}`
+      : null;
+  };
   return (report: AccountReport): string | null => {
     const key = accountKey(report.driver, report.email, report.usageLimits);
-    if (!key) return null;
+    if (!key) return report.workspaceId ? ownerOf(report) : null;
     if (report.workspaceId) return `${key}:${report.workspaceId}`;
     const known = workspaces.get(key);
     if (!known) return key;
@@ -312,6 +349,7 @@ export function collectLimitAccounts(presentations: LimitPresentations): readonl
         displayName?.toLowerCase() === PROVIDER_DISPLAY_NAMES[previous.driver]?.toLowerCase()
           ? null
           : displayName,
+      email: previous.email ?? next.email,
       plan: planSources.get(key)?.plan ?? previous.plan ?? next.plan,
       accentColor: previous.accentColor ?? next.accentColor,
       environments,
